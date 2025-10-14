@@ -1,177 +1,472 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
- 	<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
- 	<link rel="stylesheet" href="style.css" />
- 	<title>RemoteVm invite link generator</title>
- 	<meta name="viewport" content="width=device-width, initial-scale=1" />
- 	<link rel="icon" type="image/png" href="favicon.png">		
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <title>RemoteVM Link Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="favicon.png">
 </head>
-
 <body>
-	<div id="step">
-		<p id="stepNumber">1</p>
-		<h2 id="stepTitle"></h2>
-		<h3 id="stepDescription"></h3>
-		<div id="stepAnswers"></div>
-	</div>
-	<div id="progressAndLink">
-		<div id="progressContainer">
-			<div id="progress">0%</div>
-		</div>
+  <!-- Animated Background -->
+  <div class="background">
+    <div class="geometric-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+      <div class="shape shape-4"></div>
+      <div class="shape shape-5"></div>
+    </div>
+    <div class="grid-overlay"></div>
+  </div>
 
-		<div id="link">
-			<div id="finalUrl">https://Live.RemoteVm.ir/</div>
-		</div>
-	</div>
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon"></div>
+        <h1 class="logo-text">RemoteVM</h1>
+      </div>
+      <div class="subtitle">Link Generator</div>
+    </header>
+
+    <!-- Step Card -->
+    <main class="step-card" id="step">
+      <div class="step-header">
+        <div class="step-number" id="stepNumber">
+          <span>1</span>
+          <div class="step-ring"></div>
+        </div>
+        <div class="step-info">
+          <h2 class="step-title" id="stepTitle"></h2>
+          <p class="step-description" id="stepDescription"></p>
+        </div>
+      </div>
+      
+      <div class="step-content">
+        <div class="answers-container" id="stepAnswers"></div>
+      </div>
+
+      <div class="step-navigation">
+        <!-- Navigation will be inserted here -->
+      </div>
+    </main>
+
+    <!-- Progress Section -->
+    <section class="progress-section" id="progressAndLink">
+      <div class="progress-card">
+        <div class="progress-header">
+          <span class="progress-label">پیشرفت</span>
+          <span class="progress-text" id="progressText">1 / 12</span>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar" id="progress">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="link-card" id="link">
+        <div class="link-header">
+          <div class="link-icon"></div>
+          <span>لینک تولید شده</span>
+        </div>
+        <div class="link-content">
+          <div class="final-url" id="finalUrl">https://live.remotevm.ir/</div>
+          <button class="copy-button" id="copyButton">
+            <span class="copy-icon"></span>
+            کپی
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loader">
+      <div class="loader-ring"></div>
+      <div class="loader-text">بارگذاری...</div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
+
 <script>
-	function makeid(length) {
-		var result = "";
-		var characters =
-			"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-		var charactersLength = characters.length;
-		for (var i = 0; i < length; i++) {
-			result += characters.charAt(Math.floor(Math.random() * charactersLength));
-		}
-		return result;
-	}
+// Modern JavaScript with improved architecture
+class LinkGenerator {
+  constructor() {
+    this.steps = [];
+    this.currentStep = 0;
+    this.baseUrl = "https://live.remotevm.ir/";
+    this.finalUrl = this.baseUrl;
+    this.currentParams = [];
+    this.paramHistory = [[]];
+    this.elements = this.cacheElements();
+    
+    this.init();
+  }
 
-	var randomId = makeid(10);
+  cacheElements() {
+    return {
+      step: document.getElementById("step"),
+      stepNumber: document.getElementById("stepNumber"),
+      stepTitle: document.getElementById("stepTitle"),
+      stepDescription: document.getElementById("stepDescription"),
+      stepAnswers: document.getElementById("stepAnswers"),
+      progress: document.getElementById("progress"),
+      progressText: document.getElementById("progressText"),
+      finalUrl: document.getElementById("finalUrl"),
+      loadingOverlay: document.getElementById("loadingOverlay"),
+      copyButton: document.getElementById("copyButton")
+    };
+  }
 
-	var steps;
-    var currentStep;
-	var finalUrl = "https://Live.RemoteVm.ir/";
+  async init() {
+    this.showLoading();
+    try {
+      await this.loadData();
+      this.hideLoading();
+      this.printStep(0);
+      this.setupEventListeners();
+    } catch (error) {
+      this.hideLoading();
+      this.showError(error);
+    }
+  }
 
-    // --- NEW: History arrays for URL and steps
-    var urlHistory = ["https://Live.RemoteVm.ir/"]; // Stores the final URL at each step
-    var stepHistory = [0]; // Stores the index of the current step
+  async loadData() {
+    const response = await fetch("data.json");
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    this.steps = await response.json();
+  }
 
-	let url = "data.json";
+  showLoading() {
+    this.elements.loadingOverlay.classList.add('show');
+  }
 
-	fetch(url)
-		.then((res) => res.json())
-		.then((out) => {
-			steps = out;
-			printStep(0);
-		})
-		.catch((err) => {
-			console.error("Error loading data.json:", err); // Improved error handling
-			// alert("خطا در بارگذاری اطلاعات. لطفاً بعداً تلاش کنید."); // User friendly message
-		});
+  hideLoading() {
+    this.elements.loadingOverlay.classList.remove('show');
+  }
 
-	function printStep(index) {
-        // --- MODIFIED: Handle final step (URL display)
-		if (index == steps.length) {
-            document.getElementById('step').innerHTML = `
-                <h1>لینک شما آماده است!</h1>
-                <a id='outputUrl' href='${finalUrl}' target='_blank'>${finalUrl}</a>
-                <button id="copyUrlButton" style="
-                    margin-top: 20px;
-                    padding: 10px 20px;
-                    background: linear-gradient(95deg, var(--accent-color), var(--primary-color));
-                    color: var(--text-highlight);
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: bold;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 5px 15px rgba(var(--accent-color-rgb), 0.4);
-                ">کپی لینک</button>
-            `;
-            // Add click event for copy button
-            document.getElementById('copyUrlButton').onclick = function() {
-                navigator.clipboard.writeText(finalUrl).then(() => {
-                    this.innerText = "کپی شد!";
-                    setTimeout(() => { this.innerText = "کپی لینک"; }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy text: ', err);
-                    alert("خطا در کپی کردن لینک.");
-                });
-            };
-			
-			document.getElementById("progress").style.width = "100%";
-			document.getElementById("progress").innerText = "Done!";
- 			document.getElementById("link").outerHTML= ""; // Remove this section from the DOM
+  showError(error) {
+    console.error("Error loading data.json:", error);
+    this.elements.step.innerHTML = `
+      <div class="error-state">
+        <h2>خطا در بارگذاری</h2>
+        <p>لطفاً بعداً تلاش کنید.</p>
+        <button onclick="location.reload()" class="action-button">تلاش مجدد</button>
+      </div>
+    `;
+  }
 
-            return; // Prevent further execution for the final step
-		}
+  setupEventListeners() {
+    this.elements.copyButton.addEventListener('click', () => this.copyToClipboard());
+  }
 
-        // --- NEW: History management
-        // Check if we are moving forward to a new step
-        if (index > currentStep && stepHistory[stepHistory.length - 1] !== index) {
-            urlHistory.push(finalUrl);
-            stepHistory.push(index);
-        } else if (index < currentStep) {
-            // If we are moving backward, pop from history
-            urlHistory.pop();
-            stepHistory.pop();
-            // Restore finalUrl to the previous state
-            finalUrl = urlHistory[urlHistory.length - 1] || "https://Live.RemoteVm.ir/"; 
-            document.getElementById("finalUrl").innerText = finalUrl;
-        }
+  generateId(length = 10) {
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(array[i] % characters.length);
+    }
+    return result;
+  }
 
-        currentStep = index; // Update the current step index
+  rebuildUrl() {
+    this.currentParams = this.currentParams.filter(p => p && p.trim() !== '');
+    const queryString = this.currentParams.length > 0 ? '?' + this.currentParams.join('&') : '';
+    this.finalUrl = this.baseUrl + queryString;
+    this.elements.finalUrl.textContent = this.finalUrl;
+  }
 
-        var percentComplete = (index / steps.length) * 100;
-        item = steps[index];
+  updateProgress() {
+    const percentage = Math.max(7, (this.currentStep / this.steps.length) * 100);
+    const progressFill = this.elements.progress.querySelector('.progress-fill');
+    
+    if (progressFill) {
+      progressFill.style.width = `${percentage}%`;
+    }
+    
+    this.elements.progressText.textContent = `${this.currentStep + 1} / ${this.steps.length + 1}`;
+  }
 
-        document.getElementById("stepTitle").innerText = item.title;
-        document.getElementById("stepDescription").innerText = item.description;
-        document.getElementById("stepAnswers").innerHTML = null; // Clear previous answers
+  printStep(index) {
+    if (index === this.steps.length) {
+      this.renderFinalStep();
+      return;
+    }
 
-        if (index == 0) {
-            document.getElementById("progress").style.width = "7%";
-        } else {
-            document.getElementById("progress").style.width = percentComplete + "%";
-        }
+    this.updateStepNavigation(index);
+    this.renderCurrentStep(index);
+    this.updateProgress();
+  }
 
-        document.getElementById("progress").innerText =
-            index + 1 + " / " + Number.parseInt(steps.length + 1);
+  updateStepNavigation(index) {
+    if (index > this.currentStep && this.paramHistory[this.paramHistory.length - 1].length !== this.currentParams.length) {
+      this.paramHistory.push(this.currentParams.slice());
+    } else if (index < this.currentStep) {
+      this.paramHistory.pop();
+      this.currentParams = this.paramHistory[this.paramHistory.length - 1] ? 
+        this.paramHistory[this.paramHistory.length - 1].slice() : [];
+      this.rebuildUrl();
+    }
+    this.currentStep = index;
+  }
 
-        // --- MODIFIED: Create answer buttons and add back button
-		item.answers.forEach(function (answer) {
-			var el;
-			if (answer.type == "button") {
-				el = document.createElement("a");
-				el.setAttribute("data-value", answer.params);
-				el.innerText = answer.label;
-				el.onclick = function () {
-					if (answer.params == "?push=") {
-						answer.params = answer.params + randomId;
-					}
+  renderCurrentStep(index) {
+    const item = this.steps[index];
+    
+    this.elements.stepNumber.querySelector('span').textContent = index + 1;
+    this.elements.stepTitle.textContent = item.title;
+    this.elements.stepDescription.textContent = item.description;
+    
+    this.renderAnswers(item.answers, index);
+    this.rebuildUrl();
+  }
 
-					finalUrl = finalUrl + answer.params;
-					document.getElementById("finalUrl").innerText = finalUrl;
-					document.getElementById("stepNumber").innerText = index + 2;
-					printStep(index + 1);
-				};
-			} else { // type == "text"
-				el = document.createElement("input");
-				el.setAttribute("placeholder", answer.label);
-				el.onkeyup = function (e) {
-					if (e.keyCode == 13) { // Enter key
-						finalUrl = finalUrl + answer.params + el.value;
-						document.getElementById("finalUrl").innerText = finalUrl;
-						document.getElementById("stepNumber").innerText = index + 2;
-						printStep(index + 1);
-					}
-				};
-			}
-			document.getElementById("stepAnswers").appendChild(el);
-		});
+  renderAnswers(answers, stepIndex) {
+    this.elements.stepAnswers.innerHTML = '';
+    
+    answers.forEach(answer => {
+      if (answer.type === "button") {
+        this.createAnswerButton(answer, stepIndex);
+      } else if (answer.type === "text") {
+        this.createAnswerInput(answer, stepIndex);
+      }
+    });
 
-        // --- NEW: Add the back button if not on the first step
-        if (currentStep > 0) {
-            var backButton = document.createElement("a");
-            backButton.innerText = "بازگشت";
-            backButton.className = "back-button"; // Add a class for styling
-            backButton.onclick = function() {
-                document.getElementById("stepNumber").innerText = currentStep; // Adjust step number display
-                printStep(currentStep - 1); // Go back to the previous step
-            };
-            document.getElementById("stepAnswers").appendChild(backButton);
-        }
-	}
+    if (this.currentStep > 0) {
+      this.createBackButton();
+    }
+  }
+
+  createAnswerButton(answer, stepIndex) {
+    const button = document.createElement("a");
+    button.className = "answer-button";
+    button.textContent = answer.label;
+    
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.handleButtonAnswer(answer, stepIndex);
+    });
+
+    this.elements.stepAnswers.appendChild(button);
+  }
+
+  createAnswerInput(answer, stepIndex) {
+    const container = document.createElement("div");
+    container.className = "input-container";
+
+    const input = document.createElement("input");
+    input.className = "answer-input";
+    input.placeholder = answer.label;
+    input.type = "text";
+
+    const errorMsg = document.createElement("div");
+    errorMsg.className = "error-message";
+    errorMsg.textContent = "فقط حروف A-Z، a-z و اعداد 0-9 مجاز هستند";
+
+    const confirmButton = document.createElement("button");
+    confirmButton.className = "confirm-button";
+    confirmButton.textContent = "تایید";
+
+    // Input validation
+    input.addEventListener('input', () => this.validateInput(input, errorMsg));
+    input.addEventListener('keypress', (e) => this.handleInputKeypress(e, errorMsg));
+    input.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        this.handleInputSubmit(input, answer, stepIndex, errorMsg);
+      }
+    });
+
+    confirmButton.addEventListener('click', () => {
+      this.handleInputSubmit(input, answer, stepIndex, errorMsg);
+    });
+
+    container.appendChild(input);
+    container.appendChild(errorMsg);
+    container.appendChild(confirmButton);
+    this.elements.stepAnswers.appendChild(container);
+  }
+
+  validateInput(input, errorMsg) {
+    const value = input.value.trim();
+    const isValid = /^[A-Za-z0-9]*$/.test(value);
+    
+    if (isValid || value === "") {
+      errorMsg.classList.remove('show');
+      input.style.borderColor = '';
+    } else {
+      errorMsg.classList.add('show');
+      input.style.borderColor = 'var(--accent-pink)';
+    }
+    
+    return isValid;
+  }
+
+  handleInputKeypress(e, errorMsg) {
+    const char = String.fromCharCode(e.which || e.keyCode);
+    if (!/^[A-Za-z0-9]$/.test(char)) {
+      e.preventDefault();
+      errorMsg.classList.add('show');
+      setTimeout(() => errorMsg.classList.remove('show'), 2000);
+    }
+  }
+
+  handleInputSubmit(input, answer, stepIndex, errorMsg) {
+    const value = input.value.trim();
+    if (!value) return;
+    
+    if (!this.validateInput(input, errorMsg)) {
+      errorMsg.classList.add('show');
+      return;
+    }
+
+    const cleanParam = answer.params.replace(/[?&]/g, '').trim();
+    if (!cleanParam) return;
+
+    const fullParam = cleanParam + (cleanParam.endsWith('=') ? '' : '=') + value;
+    this.currentParams.push(fullParam);
+    this.rebuildUrl();
+    this.printStep(stepIndex + 1);
+  }
+
+  handleButtonAnswer(answer, stepIndex) {
+    const cleanParam = answer.params.replace(/[?&]/g, '').trim();
+    
+    if (answer.params.includes('push')) {
+      const randomId = this.generateId(10);
+      const pushParam = 'push=' + randomId;
+      this.currentParams.unshift(pushParam);
+    } else if (cleanParam) {
+      this.currentParams.push(cleanParam);
+    }
+    
+    this.rebuildUrl();
+    this.printStep(stepIndex + 1);
+  }
+
+  createBackButton() {
+    const backButton = document.createElement("button");
+    backButton.className = "back-button";
+    backButton.textContent = "← بازگشت";
+    
+    backButton.addEventListener('click', () => {
+      this.printStep(this.currentStep - 1);
+    });
+
+    this.elements.stepAnswers.appendChild(backButton);
+  }
+
+  renderFinalStep() {
+    const { hostLink, invitationLink, hostLabel, invitationLabel, hostButtonLabel, invitationButtonLabel } = this.generateFinalLinks();
+
+    this.elements.step.innerHTML = `
+      <div class="final-step">
+        <h1>🎉 لینک شما آماده است!</h1>
+        
+        <div class="links-container">
+          <div class="link-group">
+            <h3>🔗 لینک ${hostLabel}</h3>
+            <div class="link-display">${hostLink}</div>
+            <button class="action-button host-copy-btn">${hostButtonLabel}</button>
+          </div>
+          
+          <div class="link-group">
+            <h3>👥 لینک ${invitationLabel}</h3>
+            <div class="link-display">${invitationLink}</div>
+            <button class="action-button invitation-copy-btn">${invitationButtonLabel}</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Setup copy buttons
+    this.setupFinalStepButtons(hostLink, invitationLink, hostButtonLabel, invitationButtonLabel);
+    
+    // Update progress
+    const progressFill = this.elements.progress.querySelector('.progress-fill');
+    if (progressFill) {
+      progressFill.style.width = '100%';
+    }
+    this.elements.progressText.textContent = 'تکمیل شد!';
+    
+    // Hide link card
+    document.getElementById('link').style.display = 'none';
+  }
+
+  generateFinalLinks() {
+    let hostLink = this.finalUrl;
+    let invitationLink = this.finalUrl;
+    let hostLabel = "میزبان";
+    let invitationLabel = "دعوت";
+    let hostButtonLabel = "کپی لینک میزبان";
+    let invitationButtonLabel = "کپی لینک دعوت";
+
+    const hasPush = this.currentParams.some(param => param.startsWith('push='));
+    if (hasPush) {
+      const roomId = this.currentParams.find(param => param.startsWith('push=')).replace('push=', '');
+      invitationLink = `${this.baseUrl}?view=${roomId}`;
+      
+      const hasRoom = this.currentParams.some(param => param.startsWith('room='));
+      if (hasRoom) {
+        const roomValue = this.currentParams.find(param => param.startsWith('room=')).replace('room=', '');
+        invitationLink += `&room=${roomValue}`;
+      } else {
+        hostLabel = "ارسال";
+        invitationLabel = "بیننده";
+        hostButtonLabel = "کپی لینک ارسال";
+        invitationButtonLabel = "کپی لینک بیننده";
+      }
+    }
+
+    return { hostLink, invitationLink, hostLabel, invitationLabel, hostButtonLabel, invitationButtonLabel };
+  }
+
+  setupFinalStepButtons(hostLink, invitationLink, hostButtonLabel, invitationButtonLabel) {
+    const hostBtn = this.elements.step.querySelector('.host-copy-btn');
+    const invitationBtn = this.elements.step.querySelector('.invitation-copy-btn');
+
+    hostBtn.addEventListener('click', () => {
+      this.copyTextToClipboard(hostLink, hostBtn, hostButtonLabel);
+    });
+
+    invitationBtn.addEventListener('click', () => {
+      this.copyTextToClipboard(invitationLink, invitationBtn, invitationButtonLabel);
+    });
+  }
+
+  async copyTextToClipboard(text, button, originalText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = "✅ کپی شد!";
+      button.classList.add('success');
+      
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.classList.remove('success');
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      alert("خطا در کپی کردن لینک");
+    }
+  }
+
+  async copyToClipboard() {
+    await this.copyTextToClipboard(this.finalUrl, this.elements.copyButton, "کپی");
+  }
+}
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', () => {
+  new LinkGenerator();
+});
 </script>
 </html>
